@@ -1,0 +1,3 @@
+resource_name	assembly	version	source	category	derivation	limitations
+HG002.fixture.windows.tsv	GRCh38	fixture-v1	Repository HG002 compact technical interval	technical_coordinate_windows	Two non-overlapping halves plus one explicitly overlapping central window	Test-only; not an authoritative GIAB/GA4GH biological stratification
+HG008.fixture.windows.tsv	GRCh38	fixture-v1	Repository HG008 compact technical interval	technical_coordinate_windows	Two non-overlapping halves plus one explicitly overlapping central window	Test-only; not an authoritative somatic biological stratification

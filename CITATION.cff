@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata in this file."
+title: "WGS Variant Analysis Pipeline"
+type: software
+authors:
+  - family-names: "Galgale"
+    given-names: "Sarvesh"
+version: 1.0.0-rc1
+license: MIT
+keywords:
+  - nextflow
+  - whole-genome sequencing
+  - germline variant calling
+  - somatic variant calling
+  - bioinformatics workflow
+abstract: >-
+  A Nextflow DSL2 workflow for reproducible short-read human germline and
+  matched tumor-normal somatic variant-analysis validation using pinned
+  Docker containers, shared VCF normalization and QC, optional annotation,
+  visualization, and reporting.

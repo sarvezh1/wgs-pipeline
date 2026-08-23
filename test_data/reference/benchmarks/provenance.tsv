@@ -1,0 +1,5 @@
+resource_name	assembly	version	source_resource	derivation	validation
+HG002_GRCh38_giab_v4.2.1_chr20_12446968_12455543.bgzip.vcf.gz	GRCh38	v4.2.1	HG002_GRCh38_giab_v4.2.1_chr20_12446968_12455543.vcf.gz	bcftools 1.20 view -Oz plus tabix indexing	All non-header VCF records byte-identical after decompression
+HG008_GRCh38_somatic_smvar_v0.3_chr20_21900000_21980636.bgzip.vcf.gz	GRCh38-GIABv3	v0.3	HG008_GRCh38_somatic_smvar_v0.3_chr20_21900000_21980636.vcf.gz	bcftools 1.20 view -Oz plus tabix indexing	All non-header VCF records byte-identical after decompression
+germline_test_interval.bed	GRCh38		Documented compact HG002 technical fixture interval	Used as the compact fixture benchmark region	Not a full GIAB confident-region resource
+somatic_test_interval.bed	GRCh38-GIABv3		Documented compact HG008 technical fixture interval	Used as the compact fixture benchmark region	Not a full somatic benchmark-region resource

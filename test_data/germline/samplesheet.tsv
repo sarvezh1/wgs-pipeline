@@ -1,0 +1,2 @@
+sample_id	patient_id	role	fastq_r1	fastq_r2
+HG002	HG002	sample	HG002_R1.fastq.gz	HG002_R2.fastq.gz

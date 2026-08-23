@@ -1,0 +1,3 @@
+sample_id	patient_id	role	fastq_r1	fastq_r2
+normal	HG008	normal	normal_R1.fastq.gz	normal_R2.fastq.gz
+tumor	HG008	tumor	tumor_R1.fastq.gz	tumor_R2.fastq.gz

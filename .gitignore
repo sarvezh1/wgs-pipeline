@@ -1,0 +1,34 @@
+.nextflow/
+.nextflow.log*
+work/
+results/
+
+# Root-level Nextflow execution reports
+/trace.txt
+/timeline.html
+/report.html
+/dag.html
+
+# Local editor and language caches
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+*.swp
+*~
+
+# Local secrets, notebooks, browser/test scratch, and container artifacts
+.env
+.env.*
+.ipynb_checkpoints/
+playwright-report/
+test-results/
+.browser/
+*.tmp
+*.temp
+*.sif
+*.img
+
+# Local production-resource bundles must remain external
+/resources/local/
+/resources/production/

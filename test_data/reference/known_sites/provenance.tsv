@@ -1,0 +1,5 @@
+resource_name	upstream_source	assembly	version	local_file	extraction_method	interval_covered	accessed	redistribution_note
+dbSNP138	Broad Institute GATK hg38 resource bundle; underlying NCBI dbSNP	GRCh38	138	dbsnp138.GRCh38.chr20_fixture_intervals.vcf.gz	bcftools 1.20 view --regions chr20:12446968-12455543,chr20:21900000-21980636 against remote indexed VCF; tabix 1.20 index	chr20:12446968-12455543; chr20:21900000-21980636	2026-08-18	Compact interval subset of public dbSNP resource; retain upstream attribution and source URL
+
+# Source VCF: https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz
+# Source index: https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi

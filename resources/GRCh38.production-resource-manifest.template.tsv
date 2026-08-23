@@ -1,0 +1,38 @@
+resource_name	resource_type	assembly	version	source	path_or_filename	checksum	required_for
+reference_fasta	reference_fasta	GRCh38	Broad hg38/v0; GCA_000001405.15	gs://gcp-public-data--broad-references/hg38/v0/	genome/GRCh38.fa		all
+reference_fai	reference_index	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/	genome/GRCh38.fa.fai		all
+reference_dict	sequence_dictionary	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/	genome/GRCh38.dict		gatk
+bwa_mem2_0123	bwa_mem2_index	GRCh38	BWA-MEM2 2.2.1	Generated from exact reference FASTA	bwa_mem2/GRCh38.0123		alignment
+bwa_mem2_amb	bwa_mem2_index	GRCh38	BWA-MEM2 2.2.1	Generated from exact reference FASTA	bwa_mem2/GRCh38.amb		alignment
+bwa_mem2_ann	bwa_mem2_index	GRCh38	BWA-MEM2 2.2.1	Generated from exact reference FASTA	bwa_mem2/GRCh38.ann		alignment
+bwa_mem2_bwt	bwa_mem2_index	GRCh38	BWA-MEM2 2.2.1	Generated from exact reference FASTA	bwa_mem2/GRCh38.bwt.2bit.64		alignment
+bwa_mem2_pac	bwa_mem2_index	GRCh38	BWA-MEM2 2.2.1	Generated from exact reference FASTA	bwa_mem2/GRCh38.pac		alignment
+bwa_mem2_alt	bwa_alt_metadata	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.64.alt	bwa_mem2/GRCh38.alt		alignment
+bqsr_dbsnp138	known_sites_vcf	GRCh38	dbSNP build 138; Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf	gatk/Homo_sapiens_assembly38.dbsnp138.vcf.gz		bqsr
+bqsr_dbsnp138_index	tabix_index	GRCh38	Derived with tabix	Generated from exact bgzipped VCF	gatk/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi		bqsr
+bqsr_mills_indels	known_sites_vcf	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz	gatk/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz		bqsr
+bqsr_mills_indels_index	tabix_index	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi	gatk/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi		bqsr
+bqsr_known_indels	known_sites_vcf	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz	gatk/Homo_sapiens_assembly38.known_indels.vcf.gz		bqsr
+bqsr_known_indels_index	tabix_index	GRCh38	Broad hg38/v0	gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi	gatk/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi		bqsr
+hg002_primary_truth	truth_vcf	GRCh38	GIAB HG002 v5.0q	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/v5.0q/	benchmarking/HG002_GRCh38_v5.0q_smvar.vcf.gz		primary_germline_benchmark
+hg002_primary_truth_index	tabix_index	GRCh38	GIAB HG002 v5.0q	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/v5.0q/	benchmarking/HG002_GRCh38_v5.0q_smvar.vcf.gz.tbi		primary_germline_benchmark
+hg002_primary_regions	benchmark_regions_bed	GRCh38	GIAB HG002 v5.0q	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/v5.0q/	benchmarking/HG002_GRCh38_v5.0q_smvar.benchmark.bed		primary_germline_benchmark
+hg002_secondary_truth	truth_vcf	GRCh38	GIAB HG002 v4.2.1	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/NISTv4.2.1/GRCh38/	benchmarking/secondary/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz		secondary_germline_validation
+hg002_secondary_truth_index	tabix_index	GRCh38	GIAB HG002 v4.2.1	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/NISTv4.2.1/GRCh38/	benchmarking/secondary/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz.tbi		secondary_germline_validation
+hg002_secondary_regions	benchmark_regions_bed	GRCh38	GIAB HG002 v4.2.1	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/NISTv4.2.1/GRCh38/	benchmarking/secondary/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed		secondary_germline_validation
+giab_stratifications_package	stratification_archive	GRCh38	GIAB/GA4GH v3.6	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.6/	benchmarking/stratifications/genome-stratifications-GRCh38@all.tar.gz		stratified_benchmarking
+giab_stratifications_tsv	stratification_tsv	GRCh38	GIAB/GA4GH v3.6	https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.6/GRCh38@all/	benchmarking/stratifications/GRCh38@all/GRCh38-all-stratifications.tsv		stratified_benchmarking
+vep_cache	vep_cache	GRCh38	Ensembl VEP 116; GRCh38.p14	https://ftp.ensembl.org/pub/release-116/variation/indexed_vep_cache/homo_sapiens_vep_116_GRCh38.tar.gz	annotation/vep/homo_sapiens/116_GRCh38		annotation
+mutect2_germline_resource	population_allele_frequency_vcf	GRCh38	GATK somatic-hg38 bundle	gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz	somatic/germline_resource.vcf.gz		mutect2
+mutect2_germline_resource_index	tabix_index	GRCh38	GATK somatic-hg38 bundle	gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz.tbi	somatic/germline_resource.vcf.gz.tbi		mutect2
+mutect2_contamination_sites	population_sites_vcf	GRCh38	GATK somatic-hg38 bundle	gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz	somatic/contamination_sites.vcf.gz		contamination
+mutect2_contamination_sites_index	tabix_index	GRCh38	GATK somatic-hg38 bundle	gs://gatk-best-practices/somatic-hg38/small_exac_common_3.hg38.vcf.gz.tbi	somatic/contamination_sites.vcf.gz.tbi		contamination
+mutect2_panel_of_normals	panel_of_normals_vcf	GRCh38	study/platform-specific	User-generated with GATK CreateSomaticPanelOfNormals	somatic/panel_of_normals.vcf.gz		mutect2
+mutect2_panel_of_normals_index	tabix_index	GRCh38	study/platform-specific	Generated with study-specific PoN	somatic/panel_of_normals.vcf.gz.tbi		mutect2
+cnv_intervals	cnv_interval_list	GRCh38	study design-specific	Generated from exact FASTA with documented GATK preprocessing	cnv/intervals.interval_list		germline_cnv,somatic_cnv
+cnv_contig_ploidy_model	cnv_contig_ploidy_model	GRCh38	cohort/platform-specific	User-generated with DetermineGermlineContigPloidy COHORT mode	cnv/germline/contig-ploidy-model		germline_cnv
+cnv_germline_model	cnv_germline_model	GRCh38	cohort/platform-specific	User-generated with GermlineCNVCaller COHORT mode	cnv/germline/gcnv-model		germline_cnv
+cnv_read_count_pon	cnv_read_count_pon	GRCh38	cohort/platform-specific	User-generated with CreateReadCountPanelOfNormals	cnv/somatic/read-count-pon.hdf5		somatic_cnv
+cnv_common_sites	population_sites_vcf	GRCh38	study-selected	Authoritative GRCh38 population sites selected for CollectAllelicCounts	cnv/somatic/common-sites.vcf.gz		somatic_cnv
+cnv_common_sites_index	tabix_index	GRCh38	study-selected	Generated from exact CNV common-sites VCF	cnv/somatic/common-sites.vcf.gz.tbi		somatic_cnv
+grch38_par_coordinates	coordinate_metadata	GRCh38	GRCh38.p14	https://www.ncbi.nlm.nih.gov/grc/human	metadata/GRCh38.p14.par.bed		future_sex_chromosome_validation
