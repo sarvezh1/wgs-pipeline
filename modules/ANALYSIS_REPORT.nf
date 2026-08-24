@@ -6,7 +6,7 @@ process ANALYSIS_REPORT {
     container 'python:3.11@sha256:d0199e2a90bf7a206a485b115323a75bc946f30b463d704c5435a454aca084dd'
 
     input:
-    tuple path(report_inputs, stageAs: 'report_inputs/*'), path(samplesheet), val(report_id), val(analysis_type), val(caller), val(assembly), val(resource_mode), val(pipeline_version), val(nextflow_version), val(run_bqsr), val(run_benchmark), val(run_vep), val(run_sv), val(run_cnv), val(run_coverage_qc), val(run_multiqc), val(run_vcf2circos)
+    tuple path(report_inputs, stageAs: 'report_inputs/*'), path(samplesheet), val(report_id), val(analysis_type), val(caller), val(assembly), val(resource_mode), val(pipeline_version), val(nextflow_version), val(run_bqsr), val(run_benchmark), val(run_vep), val(run_sv), val(run_cnv), val(run_coverage_qc), val(run_multiqc), val(run_vcf2circos), val(vcf2circos_mode)
 
     output:
     tuple val(report_id), path("${report_id}.${analysis_type}.wgs_report.html"), path('figures/*.svg', optional: true), emit: report
@@ -21,7 +21,8 @@ process ANALYSIS_REPORT {
         run_coverage_qc ? '--run-coverage-qc' : '',
     ].findAll { flag -> flag }.join(' ')
     def multiqc_link = run_multiqc ? "--multiqc-link '../multiqc/${analysis_type}.multiqc.html'" : ''
-    def vcf2circos_link = run_vcf2circos ? "--vcf2circos-link '../vcf2circos/${report_id}.${caller == 'compare' ? (analysis_type == 'germline' ? 'haplotypecaller' : 'mutect2') : caller}.vcf2circos.html'" : ''
+    def visualization_suffix = vcf2circos_mode == 'genome' ? '.genome.vcf2circos.html' : '.vcf2circos.html'
+    def vcf2circos_link = run_vcf2circos ? "--vcf2circos-link '../vcf2circos/${report_id}.${caller == 'compare' ? (analysis_type == 'germline' ? 'haplotypecaller' : 'mutect2') : caller}${visualization_suffix}'" : ''
     """
     set -euo pipefail
     generate_analysis_report.py \

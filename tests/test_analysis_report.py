@@ -120,6 +120,17 @@ class AnalysisReportTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('href="../multiqc/somatic.multiqc.html"', document)
 
+    def test_regional_and_genome_circos_links_are_explicit_and_not_auto_substituted(self):
+        regional, regional_document = self.run_report("--vcf2circos-link", "../vcf2circos/case.mutect2.vcf2circos.html")
+        self.assertEqual(regional.returncode, 0, regional.stderr)
+        self.assertIn('href="../vcf2circos/case.mutect2.vcf2circos.html"', regional_document)
+        genome, genome_document = self.run_report("--vcf2circos-link", "../vcf2circos/case.mutect2.genome.vcf2circos.html")
+        self.assertEqual(genome.returncode, 0, genome.stderr)
+        self.assertIn('href="../vcf2circos/case.mutect2.genome.vcf2circos.html"', genome_document)
+        absent, absent_document = self.run_report()
+        self.assertEqual(absent.returncode, 0, absent.stderr)
+        self.assertNotIn("genome_mode_demo", absent_document)
+
     def test_deterministic_rendering(self):
         self.add_variant()
         first, document_a = self.run_report()

@@ -13,78 +13,109 @@ When `--calling_interval` is omitted, callers operate across the supplied refere
 
 ```mermaid
 flowchart TB
-    INPUT["Samplesheet + paired FASTQ<br/>GRCh38 reference"]
-    PREP["Input validation + QC<br/>FastQC · fastp"]
-    ALIGN["BWA-MEM2 alignment<br/>Sort · index · duplicate marking"]
-    BQSR["Optional GATK BQSR"]
-    READY["Caller-ready BAM"]
+  INPUT["Samplesheet + paired FASTQ<br/>GRCh38 reference"] --> CHECK["Input validation"]
+  CHECK --> FQC["FastQC"]
+  CHECK --> FP["fastp trimming and QC"]
+  FP --> ALIGN["BWA-MEM2 alignment"]
+  ALIGN --> SORT["Coordinate sort + index"]
+  SORT --> DUP["Duplicate marking + BAM QC"]
+  DUP -->|run_bqsr=false| READY["Caller-ready BAM"]
+  DUP -->|run_bqsr=true| BQSR["GATK BQSR<br/>Optional"]
+  BQSR --> READY
 
-    INPUT --> PREP --> ALIGN
-    ALIGN --> BQSR --> READY
-    ALIGN -->|BQSR disabled| READY
+  READY -->|run_coverage_qc=true| COV["mosdepth coverage QC<br/>Optional"]
+  READY -->|run_sv=true| MANTA["Manta SV calling<br/>Optional"]
+  READY -->|run_cnv=true| CNV["GATK CNV<br/>Production resources"]
 
-    READY --> MODE{"Variant analysis"}
+  READY --> MODE{"Analysis mode"}
 
-    subgraph GERMLINE["Germline"]
-        direction TB
-        GENTRY["Germline calling"]
-        HC["GATK HaplotypeCaller"]
-        DV["DeepVariant"]
-        GOUT["Germline callsets"]
+  MODE -->|Germline| GSELECT["Germline callers"]
+  MODE -->|Somatic| SSELECT["Matched tumor-normal callers"]
 
-        GENTRY --> HC
-        GENTRY --> DV
-        HC --> GOUT
-        DV --> GOUT
-    end
+  subgraph GERMLINE["Germline"]
+      direction LR
+      GSELECT --> HC["GATK HaplotypeCaller"]
+      GSELECT --> DV["DeepVariant"]
+  end
 
-    subgraph SOMATIC["Matched tumor-normal"]
-        direction TB
-        SENTRY["Somatic calling"]
-        M2["Mutect2"]
-        ST["Strelka2"]
-        DS["DeepSomatic"]
-        SOUT["Somatic callsets"]
+  subgraph SOMATIC["Matched tumor-normal"]
+      direction LR
+      SSELECT --> M2["Mutect2"]
+      SSELECT --> ST["Strelka2"]
+      SSELECT --> DS["DeepSomatic"]
+  end
 
-        SENTRY --> M2
-        SENTRY --> ST
-        SENTRY --> DS
-        M2 --> SOUT
-        ST --> SOUT
-        DS --> SOUT
-    end
+  subgraph SOMATIC["Matched tumor-normal somatic"]
+      direction TB
+      SSELECT{"caller"}
+      M2["Mutect2<br/>basic or production profile"]
+      ST["Strelka2"]
+      DS["DeepSomatic"]
+      SSELECT --> M2
+      SSELECT --> ST
+      SSELECT --> DS
+  end
 
-    MODE ==>|GERMLINE| GENTRY
-    MODE ==>|SOMATIC| SENTRY
+  MODE -->|germline| GSELECT
+  MODE -->|somatic| SSELECT
+  HC --> VCFP["VCF normalization + QC"]
+  DV --> VCFP
+  M2 --> VCFP
+  ST --> VCFP
+  DS --> VCFP
 
-    GOUT --> VCF["Normalized small-variant callsets"]
-    SOUT --> VCF
+  VCFP -->|run_benchmark=true| BENCH{"benchmark_mode"}
+  BENCH -->|germline_happy| HAPPY["hap.py + vcfeval<br/>confident-region germline benchmark"]
+  BENCH -->|regression or somatic| EXACT["Normalized exact alleles<br/>region-restricted"]
+  VCFP -->|caller=compare| COMP["Descriptive caller concordance<br/>alleles, genotypes, Jaccard"]
+  HAPPY -->|strata configured| STRAT["Native benchmark stratification"]
+  EXACT -->|strata configured| STRAT
+  COMP -->|strata configured| STRAT
 
-    VCF --> DOWN["Benchmarking · caller concordance<br/>stratification · VEP · VCF2Circos"]
+  VCFP -->|run_vep=true| VEP["Ensembl VEP 116<br/>Optional"]
+  VCFP -->|run_vep=false| VIZ["VCF2Circos<br/>Optional"]
+  VEP --> VIZ
 
-    READY --> MOD["Additional WGS modalities<br/>mosdepth · Manta · GATK CNV"]
+  FQC -. native QC .-> MQC["MultiQC reporting sink<br/>Optional"]
+  FP -. native QC .-> MQC
+  DUP -. BAM QC .-> MQC
+  BQSR -. recalibration table .-> MQC
+  VCFP -. bcftools stats .-> MQC
 
-    PREP -. QC .-> REPORT["Integrated reporting"]
-    DOWN --> REPORT
-    MOD --> REPORT
+  VCFP -. standardized summaries .-> REPORT["Integrated WGS report<br/>Optional terminal sink"]
+  HAPPY -. accuracy .-> REPORT
+  EXACT -. accuracy .-> REPORT
+  COMP -. concordance .-> REPORT
+  STRAT -. stratified metrics .-> REPORT
+  COV -. coverage summaries .-> REPORT
+  MANTA -. final SV summaries .-> REPORT
+  CNV -. native CNV summaries .-> REPORT
+  CHECK -. execution metadata .-> PERF["Performance reports<br/>Optional terminal sink"]
+  PERF -. compute summaries .-> REPORT
+  MQC -. local link .-> REPORT
+  VIZ -. local link .-> REPORT
 
-    REPORT --> OUT["HTML report · MultiQC<br/>performance + provenance"]
+  classDef input fill:#d9f7f2,stroke:#16877a,color:#123b36,stroke-width:1.5px;
+  classDef qc fill:#fff3bf,stroke:#c79000,color:#4d3b00,stroke-width:1.5px;
+  classDef align fill:#dceeff,stroke:#3977b7,color:#173a5e,stroke-width:1.5px;
+  classDef germline fill:#d8f3e8,stroke:#23856b,color:#16483b,stroke-width:1.5px;
+  classDef somatic fill:#ffe0d2,stroke:#cf6d4b,color:#5b2c1e,stroke-width:1.5px;
+  classDef shared fill:#e8e0ff,stroke:#7259b8,color:#35275c,stroke-width:1.5px;
+  classDef report fill:#ddf5d8,stroke:#4e9850,color:#244d27,stroke-width:1.5px;
+  classDef optional fill:#fff0b3,stroke:#c48a00,color:#503800,stroke-width:1.5px,stroke-dasharray:5 3;
+  classDef decision fill:#e1f5f2,stroke:#277d75,color:#183f3b,stroke-width:1.5px;
 
-    classDef input fill:#d9f7f2,stroke:#16877a,color:#123b36,stroke-width:1.5px;
-    classDef prep fill:#dceeff,stroke:#3977b7,color:#173a5e,stroke-width:1.5px;
-    classDef germline fill:#d8f3e8,stroke:#23856b,color:#16483b,stroke-width:1.5px;
-    classDef somatic fill:#ffe0d2,stroke:#cf6d4b,color:#5b2c1e,stroke-width:1.5px;
-    classDef shared fill:#e8e0ff,stroke:#7259b8,color:#35275c,stroke-width:1.5px;
-    classDef report fill:#ddf5d8,stroke:#4e9850,color:#244d27,stroke-width:1.5px;
-    classDef decision fill:#e1f5f2,stroke:#277d75,color:#183f3b,stroke-width:1.5px;
-
-    class INPUT input;
-    class PREP,ALIGN,BQSR,READY prep;
-    class GENTRY,HC,DV,GOUT germline;
-    class SENTRY,M2,ST,DS,SOUT somatic;
-    class MODE decision;
-    class VCF,DOWN,MOD shared;
-    class REPORT,OUT report;
+  class INPUT input;
+  class CHECK,FQC,FP qc;
+  class ALIGN,SORT,DUP,READY align;
+  class GSELECT,HC,DV germline;
+  class SSELECT,M2,ST,DS somatic;
+  class MODE decision;
+  class VCFP shared;
+  class BENCH decision;
+  class HAPPY,EXACT,COMP,STRAT report;
+  class BQSR,VEP,VIZ,COV,MANTA,CNV optional;
+  class MQC,PERF,REPORT report;
 ```
 
 MultiQC and the integrated analysis report are reporting sinks. They aggregate or summarize derived outputs but do not modify reads, BAMs, calls, annotations, benchmarks, concordance, stratification, SV/CNV results, or visualizations.
@@ -314,7 +345,9 @@ The frozen production ecosystem, authoritative sources, study-specific exception
 | `vep_cache` | External VEP cache root | `<resource_dir>/annotation/vep` in production | Required for cache mode |
 | `vep_gtf` | Bgzip-compressed GTF | none | Required for GTF mode together with `<file>.tbi` |
 | `run_vcf2circos` | Enables interactive visualization | `false` | `true` or `false` |
-| `vcf2circos_static` | VCF2Circos static-resource root | none | Required when VCF2Circos is enabled |
+| `vcf2circos_mode` | Visualization architecture | `regional` | Explicitly `regional` or `genome`; no automatic switching |
+| `vcf2circos_bin_size` | Genome-mode small-variant density bin size (bp) | `1000000` | Positive integer |
+| `vcf2circos_static` | VCF2Circos static-resource root | none | Required only for regional mode |
 | `run_multiqc` | Enables final QC aggregation | `false` | `true` or `false` |
 | `run_performance_report` | Enables native Nextflow execution reports and standardized trace summaries | `false` | Strictly `true` or `false`; no custom performance analysis runs when false |
 | `run_analysis_report` | Enables the terminal integrated static HTML report | `false` | Strictly `true` or `false`; no report process or finalization runs when false |
@@ -347,7 +380,7 @@ The production manifest retains the established eight-column schema (`resource_n
 
 The optional ploidy TSV records a user-declared standard `XX`, `XY`, or unknown sex-chromosome configuration without inferring sex from names or sparse reads. Autosomes are represented as typically diploid. Standard XX/XY non-PAR X/Y and PAR ploidies are recorded as configuration metadata, but existing HaplotypeCaller and DeepVariant commands remain unchanged: a single global HaplotypeCaller `--sample-ploidy` would mishandle autosomes or PARs, and validated per-region scatter/routing is not yet implemented. DeepVariant can accept PAR-region guidance, but this is not enabled without a selected authoritative GRCh38 PAR resource and legitimate X/Y validation. Somatic callers retain native tumor behavior. GATK gCNV contig ploidy is supplied by its external trained model. Aneuploidy, mosaicism, and non-standard karyotypes require an explicit future model rather than being coerced into XX/XY.
 
-The existing chr20 fixtures validate autosomal Manta and coverage instrumentation only. They cannot biologically validate X/Y/PAR handling or train/evaluate CNV models. The standardized tables are machine-readable inputs to the integrated report; no consensus interpretation, clinical interpretation, or SV/CNV benchmark claim is produced. VCF2Circos could later consume density, SV, and CNV tracks after explicit renderer support, but its current curated artifact and track contract are unchanged.
+The existing chr20 fixtures validate autosomal Manta and coverage instrumentation only. They cannot biologically validate X/Y/PAR handling or train/evaluate CNV models. The standardized tables are machine-readable inputs to the integrated report; no consensus interpretation, clinical interpretation, or SV/CNV benchmark claim is produced. Compact fixtures and the permanent HG008 artifact remain regional visualization examples; a genome visualization requires unrestricted full-GRCh38 production inputs.
 
 ## Performance reporting and compute profiles
 
@@ -785,7 +818,21 @@ The corresponding `resources/genes.release116.chr20.gtf.gz.tbi` must exist. GTF 
 
 ## VCF2Circos visualization
 
-VCF2Circos 1.2.0 generates a deterministic interactive HTML after shared VCF processing. When VEP is enabled it consumes the annotated VCF; otherwise it consumes the normalized VCF. The preparation step selects PASS records when present. For entirely unfiltered germline VCFs, it retains all unfiltered records. This visualization derivative never replaces or modifies the upstream VCF.
+`--vcf2circos_mode regional` is the compatibility default. VCF2Circos 1.2.0 generates the existing deterministic interactive HTML after shared VCF processing. When VEP is enabled it consumes the annotated VCF; otherwise it consumes the normalized VCF. The preparation step selects PASS records when present. For entirely unfiltered germline VCFs, it retains all unfiltered records. Regional naming remains `<sample-or-patient>.<caller>.vcf2circos.html`, and the permanent HG008 chr20 HTML and screenshot remain regional artifacts.
+
+`--vcf2circos_mode genome` explicitly selects the repository-authored Plotly genome renderer. It requires production resource mode, unrestricted calling, and the supplied reference FAI; chromosome lengths are never hard-coded. The primary ring follows `chr1` through `chr22`, `chrX`, and `chrY` when present in the FAI. ALT, unplaced, decoy, and other non-primary contigs are omitted only from the visual ring and recorded, with the included contigs, in visualization provenance. This does not alter the reference, VCF, or any upstream calculation.
+
+Genome mode consumes the final normalized small-variant VCF and plots only fixed-bin counts of PASS SNVs and PASS indels/non-SNV small alleles; it never draws millions of individual small-variant points and does not require VEP. `--vcf2circos_bin_size` defaults to 1,000,000 bp. When enabled outputs exist, native mosdepth regional means add germline or tumor/normal depth tracks, final GATK CNV segments add scientifically defined gain/loss and (for somatic called SEG) neutral tracks, and the final Manta VCF adds central DEL, DUP, INV, or paired BND breakpoint links. Missing coverage/CNV/SV inputs and a valid zero-SV Manta callset yield a valid figure with those tracks absent. Small variants are never converted to links, and no SV or CNV records are inferred or fabricated.
+
+Genome outputs are self-contained and offline:
+
+```text
+vcf2circos/<sample-or-patient>.<caller>.genome.vcf2circos.html
+vcf2circos/<sample-or-patient>.<caller>.genome_track_summary.tsv
+vcf2circos/<sample-or-patient>.<caller>.genome_visualization_provenance.tsv
+```
+
+The regional implementation is VCF2Circos-derived and retains its attribution. The genome layout and track assembly are repository-authored Python/Plotly visualization logic running in the existing visualization container; they consume, but do not reinterpret or replace, native Manta, GATK CNV, and mosdepth scientific outputs. Compact fixtures are not whole-genome showcases; controlled multi-chromosome records exist only transiently in renderer tests and carry no biological accuracy claim.
 
 The BioContainer does not include the required static hg38 assembly bundle. Supply `--vcf2circos_static` pointing to a directory with this layout:
 
@@ -801,7 +848,7 @@ The BioContainer does not include the required static hg38 assembly bundle. Supp
         └── exons.hg38.sorted.txt
 ```
 
-Prepare these resources according to the [upstream VCF2Circos assembly instructions](https://github.com/bioinfo-chru-strasbourg/vcf2circos#configuration-folder). The upstream procedure derives the assembly files from matching UCSC hg38 `chromInfo.txt.gz`, `cytoBand.txt.gz`, and `ncbiRefSeqCurated.txt.gz` tables. The repository checks the complete layout before scheduling visualization and does not publish the resource bundle.
+Prepare these resources according to the [upstream VCF2Circos assembly instructions](https://github.com/bioinfo-chru-strasbourg/vcf2circos#configuration-folder). The upstream procedure derives the assembly files from matching UCSC hg38 `chromInfo.txt.gz`, `cytoBand.txt.gz`, and `ncbiRefSeqCurated.txt.gz` tables. The repository checks the complete layout before scheduling regional visualization and does not publish the resource bundle. Genome mode uses the supplied reference FAI and does not require this static bundle.
 
 VCF2Circos is distributed under AGPL-3.0-or-later. The self-contained HTML embeds Plotly.js, which retains its MIT license notice. These third-party licenses do not replace the repository's own license terms.
 
@@ -854,7 +901,7 @@ Published files are written below `--outdir`:
 ├── structural_variants/    # final/candidate Manta VCFs and summaries, optional
 ├── cnv/                    # native GATK CNV outputs and conservative summaries, optional
 ├── vep/                    # annotated VCF/TBI, optional
-├── vcf2circos/             # visualization input derivative, summary, and HTML, optional
+├── vcf2circos/             # regional or genome HTML plus visualization TSVs, optional
 ├── provenance/             # resources, GATK path, and benchmark configuration
 ├── performance/            # optional task/stage/caller/workflow TSVs and provenance
 │   └── nextflow/           # native trace, report, timeline, and DAG
@@ -866,7 +913,7 @@ Only directories relevant to the selected mode and enabled optional stages are c
 
 ## Example outputs
 
-These examples were generated from the real compact HG008 somatic fixture. They demonstrate pipeline reporting and visualization, not a whole-genome or clinical analysis.
+The integrated report, MultiQC, and regional Circos examples below were generated from the real compact HG008 somatic fixture. The genome-mode Circos example is a separate deterministic visualization-only demonstration using synthetic renderer-test records; it is not HG002, HG008, a production result, truth, or benchmark data.
 
 ### Integrated WGS report
 
@@ -880,11 +927,19 @@ The [self-contained HG008 somatic report](examples/report/HG008.somatic.wgs_repo
 
 The report summarizes HG008 tumor and normal read QC, alignment, duplicate metrics, and variant-level bcftools statistics. Open the [self-contained interactive MultiQC report](examples/multiqc/HG008.somatic.multiqc.html).
 
-### Interactive VCF2Circos
+### Genome-mode Circos demonstration
+
+<img src="assets/vcf2circos_genome_demo.png" alt="Synthetic GRCh38 genome-mode Circos visualization demonstration" width="900">
+
+The primary Circos showcase is the [self-contained genome-mode demonstration](examples/vcf2circos/genome_mode_demo.vcf2circos.html). It displays all canonical GRCh38 chromosomes with fixed-bin PASS SNV and indel density rings, synthetic tumor/normal depth bands, representative CNV segment arcs, and synthetic final-SV-style links solely to exercise renderer presentation. It is explicitly visualization demonstration data, not HG002, HG008, a production WGS result, truth, or benchmark output.
+
+Genome mode is selected explicitly with `--vcf2circos_mode genome` and is intended for unrestricted production whole-genome inputs. Its canonical ideogram uses the supplied reference FAI. SNV/indel density, mosdepth coverage, GATK CNV, and final PASS Manta link tracks are data-dependent: each is omitted cleanly when its corresponding valid upstream output is unavailable. The renderer does not imply that every production plot contains every track.
+
+### Regional VCF2Circos compatibility example
 
 <img src="assets/vcf2circos_hg008.png" alt="HG008 Mutect2 VCF2Circos chromosome 20 visualization" width="900">
 
-The curated Mutect2 example displays 14 PASS variants, including 12 SNVs and 2 indels, from GRCh38 `chr20:21,900,000-21,980,636`. The full chromosome 20 ideogram is retained and the exact tested interval is highlighted. Genomic coordinates are not redistributed. VEP `CSQ` fields are available in variant hover text. Open the [self-contained interactive VCF2Circos report](examples/vcf2circos/HG008.mutect2.somatic.vcf2circos.html).
+Regional mode remains the compatibility default and is intended for restricted or compact analyses. The curated HG008 Mutect2 example displays 14 PASS variants, including 12 SNVs and 2 indels, from GRCh38 `chr20:21,900,000-21,980,636`. The full chromosome 20 ideogram is retained and the exact tested interval is highlighted. Genomic coordinates are not redistributed. VEP `CSQ` fields are available in variant hover text. Open the [self-contained interactive regional VCF2Circos report](examples/vcf2circos/HG008.mutect2.somatic.vcf2circos.html).
 
 ## Technical validation
 
@@ -985,7 +1040,7 @@ The optional BQSR fixture uses a compact dbSNP 138 subset covering both validati
 - The production Mutect2 profile requires external population, PoN, and contamination-sites resources, but validation cannot prove that they are comprehensive or appropriate for a particular cohort.
 - Cohort-scale GenomicsDBImport/joint genotyping is not implemented; emitted standard GVCFs are retained for that later workflow.
 - Production VEP cache mode requires an external release-116 GRCh38 cache.
-- VCF2Circos requires an external hg38 static-resource directory.
+- Regional VCF2Circos requires an external hg38 static-resource directory; genome mode instead requires unrestricted full-GRCh38 production data and a complete FAI.
 - Technical fixture benchmarks do not establish clinical validity or general comparative caller performance.
 - The frozen primary HG002 benchmark is GIAB v5.0q and is guarded by explicit male-aware hap.py configuration and trusted resource-identity checks. The bundled v4.2.1 subset remains a secondary, non-sex-aware regression fixture by default.
 - The somatic engine is an exact normalized PASS-allele comparator, not a genotype-aware germline hap.py analysis or a specialized somatic benchmarking suite.

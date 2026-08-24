@@ -213,3 +213,70 @@ JSON
     fi
     """
 }
+
+process VCF2CIRCOS_EMPTY_TRACKS {
+    label 'process_low'
+    tag 'genome visualization optional inputs'
+
+    output:
+    path 'NO_COVERAGE_TRACK', emit: coverage
+    path 'NO_SV_TRACK', emit: sv
+    path 'NO_CNV_TRACK', emit: cnv
+
+    script:
+    """
+    touch NO_COVERAGE_TRACK NO_SV_TRACK NO_CNV_TRACK
+    """
+}
+
+process VCF2CIRCOS_GENOME {
+    label 'process_medium'
+    tag "${meta.patient_id ?: meta.sample_id}:${caller_name}:genome"
+
+    publishDir "${params.outdir ?: 'results'}/vcf2circos", mode: 'copy', overwrite: true, pattern: '*.genome*'
+    // Retain the existing VCF2Circos BioContainer because it already supplies
+    // Python/Plotly. The genome figure itself is repository-authored; the
+    // regional VCF2Circos invocation above remains unchanged.
+    container 'quay.io/biocontainers/vcf2circos:1.2.0--pyhdfd78af_0'
+
+    input:
+    tuple val(meta), val(caller_name), path(visualization_vcf), path(reference_fai), val(analysis_type), val(bin_size), val(coverage_labels), path(coverage_files), path(sv_vcfs), path(cnv_segments), val(cnv_format)
+
+    output:
+    tuple val(meta), val(caller_name), path("${meta.patient_id ?: meta.sample_id}.${caller_name}.genome.vcf2circos.html"), path("${meta.patient_id ?: meta.sample_id}.${caller_name}.genome_track_summary.tsv"), path("${meta.patient_id ?: meta.sample_id}.${caller_name}.genome_visualization_provenance.tsv"), emit: visualizations
+
+    script:
+    def output_id = meta.patient_id ?: meta.sample_id
+    def coverage_list = coverage_files instanceof List ? coverage_files : [coverage_files]
+    def sv_list = sv_vcfs instanceof List ? sv_vcfs : [sv_vcfs]
+    def cnv_list = cnv_segments instanceof List ? cnv_segments : [cnv_segments]
+    def coverage_args = coverage_list.withIndex().findAll { coverage_file, index -> coverage_file.name != 'NO_COVERAGE_TRACK' && index < coverage_labels.size() }.collect { coverage_file, index -> "--coverage '${coverage_labels[index]}=${coverage_file}'" }.join(' ')
+    def sv_arg = sv_list[0].name == 'NO_SV_TRACK' ? '' : "--sv '${sv_list[0]}'"
+    def cnv_arg = cnv_list[0].name == 'NO_CNV_TRACK' ? '' : "--cnv '${cnv_list[0]}' --cnv-format '${cnv_format}'"
+    """
+    set -euo pipefail
+
+    render_genome_circos.py \
+        --vcf '${visualization_vcf}' \
+        --fai '${reference_fai}' \
+        --sample '${output_id}' \
+        --caller '${caller_name}' \
+        --analysis-type '${analysis_type}' \
+        --bin-size '${bin_size}' \
+        ${coverage_args} \
+        ${sv_arg} \
+        ${cnv_arg} \
+        --output '${output_id}.${caller_name}.genome.vcf2circos.html' \
+        --track-summary '${output_id}.${caller_name}.genome_track_summary.tsv' \
+        --provenance '${output_id}.${caller_name}.genome_visualization_provenance.tsv'
+
+    test -s '${output_id}.${caller_name}.genome.vcf2circos.html'
+    test -s '${output_id}.${caller_name}.genome_track_summary.tsv'
+    test -s '${output_id}.${caller_name}.genome_visualization_provenance.tsv'
+    grep -q 'Plotly.newPlot' '${output_id}.${caller_name}.genome.vcf2circos.html'
+    if grep -Eq '<script[^>]+src=|<link[^>]+href=|file://|/tmp/|/work/' '${output_id}.${caller_name}.genome.vcf2circos.html'; then
+        echo 'Genome visualization portability error: external asset or machine path detected' >&2
+        exit 1
+    fi
+    """
+}

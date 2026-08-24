@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - Matched tumor-normal somatic calling with Mutect2, Strelka2 2.9.10, and DeepSomatic 1.10.0.
 - Shared bcftools normalization, indexing, statistics, and compact variant summaries.
 - Optional Ensembl VEP 116 annotation and VCF2Circos 1.2.0 visualization.
+- Explicit regional (compatibility default) and production genome VCF2Circos modes, with a repository-authored offline Plotly genome ideogram, binned PASS SNV/indel densities, optional native mosdepth/GATK CNV tracks, real final-Manta breakpoint links, and machine-readable track/provenance TSVs.
+- Public genome-mode Circos demonstration with canonical GRCh38 ordering, concentric density/coverage/CNV tracks, optional final PASS Manta relationships, self-contained offline HTML, and preserved regional visualization compatibility.
 - Optional MultiQC 1.27.1 aggregation of native QC reports.
 - Compact real HG002 and HG008 GRCh38 chr20 validation fixtures, benchmark truth subsets, known-sites data, and provenance records.
 - Self-contained HG008 MultiQC and VCF2Circos example reports with browser-rendered screenshots.

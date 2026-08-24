@@ -16,7 +16,7 @@ include { STRELKA2_REGIONS; STRELKA2; MERGE_STRELKA2_VCFS } from './modules/STRE
 include { DEEPSOMATIC } from './modules/DEEPSOMATIC'
 include { VCF_PROCESSING } from './modules/VCF_PROCESSING'
 include { VEP } from './modules/VEP'
-include { VCF2CIRCOS_PREP; VCF2CIRCOS } from './modules/VCF2CIRCOS'
+include { VCF2CIRCOS_PREP; VCF2CIRCOS; VCF2CIRCOS_EMPTY_TRACKS; VCF2CIRCOS_GENOME } from './modules/VCF2CIRCOS'
 include { MULTIQC } from './modules/MULTIQC'
 include { HAPPY_BENCHMARK; EXACT_ALLELE_BENCHMARK } from './modules/BENCHMARK'
 include { CALLSET_COMPARISON } from './modules/CALLSET_COMPARISON'
@@ -92,6 +92,15 @@ workflow {
     run_bqsr = params.run_bqsr?.toString()?.toBoolean() ?: false
     run_vep = params.run_vep?.toString()?.toBoolean() ?: false
     run_vcf2circos = params.run_vcf2circos?.toString()?.toBoolean() ?: false
+    vcf2circos_mode = params.vcf2circos_mode?.toString()?.trim()?.toLowerCase() ?: 'regional'
+    if (!(vcf2circos_mode in ['regional', 'genome'])) {
+        throw new IllegalArgumentException("VCF2Circos configuration error: --vcf2circos_mode must be 'regional' or 'genome'")
+    }
+    def vcf2circos_bin_text = params.vcf2circos_bin_size?.toString()?.trim() ?: '1000000'
+    if (!(vcf2circos_bin_text ==~ /[1-9][0-9]*/)) {
+        throw new IllegalArgumentException("VCF2Circos configuration error: --vcf2circos_bin_size must be a positive integer")
+    }
+    vcf2circos_bin_size = vcf2circos_bin_text.toInteger()
     run_multiqc = params.run_multiqc?.toString()?.toBoolean() ?: false
     run_benchmark = params.run_benchmark?.toString()?.toBoolean() ?: false
     selected_caller = params.caller?.toString()?.trim() ?: ''
@@ -121,6 +130,14 @@ workflow {
         resource_manifest_path = params.resource_manifest ? file(params.resource_manifest).toAbsolutePath().toString() : (resource_dir_path ? "${resource_dir_path}/metadata/manifest.tsv" : '')
     }
     calling_interval = params.calling_interval?.toString()?.trim() ?: ''
+    if (run_vcf2circos && vcf2circos_mode == 'genome') {
+        if (resource_mode != 'production') {
+            throw new IllegalArgumentException("VCF2Circos genome mode requires --resource_mode production and a full reference FAI")
+        }
+        if (calling_interval) {
+            throw new IllegalArgumentException("VCF2Circos genome mode requires unrestricted production calling; remove --calling_interval")
+        }
+    }
     if (params.known_sites) {
         known_sites_paths = params.known_sites.toString().split(',').collect { known_site -> file(known_site.trim()).toAbsolutePath().toString() }
     } else if (resource_mode == 'fixture') {
@@ -241,7 +258,7 @@ workflow {
         vep_mode,
         vep_cache_path,
         vep_gtf_path,
-        run_vcf2circos,
+        run_vcf2circos && vcf2circos_mode == 'regional',
         vcf2circos_static_path,
         gatk_germline_mode,
         gatk_somatic_profile,
@@ -926,25 +943,64 @@ workflow {
     }
 
     if (run_vcf2circos) {
-        if (run_vep) {
-            visualization_inputs = annotated_calls.map { meta, caller_name, annotated_vcf, annotated_vcf_index ->
-                tuple(meta, caller_name, annotated_vcf, annotated_vcf_index, 'vep', params.analysis_type.toString(), calling_interval)
+        if (vcf2circos_mode == 'regional') {
+            if (run_vep) {
+                visualization_inputs = annotated_calls.map { meta, caller_name, annotated_vcf, annotated_vcf_index ->
+                    tuple(meta, caller_name, annotated_vcf, annotated_vcf_index, 'vep', params.analysis_type.toString(), calling_interval)
+                }
+            } else {
+                visualization_inputs = processed_calls.map { meta, caller_name, normalized_vcf, normalized_vcf_index, _bcftools_stats, _variant_summary ->
+                    tuple(meta, caller_name, normalized_vcf, normalized_vcf_index, 'normalized', params.analysis_type.toString(), calling_interval)
+                }
             }
-        } else {
-            visualization_inputs = processed_calls.map { meta, caller_name, normalized_vcf, normalized_vcf_index, _bcftools_stats, _variant_summary ->
-                tuple(meta, caller_name, normalized_vcf, normalized_vcf_index, 'normalized', params.analysis_type.toString(), calling_interval)
-            }
-        }
 
-        visualization_prepared = VCF2CIRCOS_PREP(visualization_inputs).prepared
-        vcf2circos_resources = channel.value(file(vcf2circos_static_path, checkIfExists: false))
-        vcf2circos_inputs = visualization_prepared
-            .combine(vcf2circos_resources)
-            .map { meta, caller_name, visualization_vcf, visualization_vcf_index, visualization_summary, input_kind, configured_interval, static_resources ->
-                tuple(meta, caller_name, visualization_vcf, visualization_vcf_index, visualization_summary, input_kind, configured_interval, static_resources)
+            visualization_prepared = VCF2CIRCOS_PREP(visualization_inputs).prepared
+            vcf2circos_resources = channel.value(file(vcf2circos_static_path, checkIfExists: false))
+            vcf2circos_inputs = visualization_prepared
+                .combine(vcf2circos_resources)
+                .map { meta, caller_name, visualization_vcf, visualization_vcf_index, visualization_summary, input_kind, configured_interval, static_resources ->
+                    tuple(meta, caller_name, visualization_vcf, visualization_vcf_index, visualization_summary, input_kind, configured_interval, static_resources)
+                }
+            vcf2circos_results = VCF2CIRCOS(vcf2circos_inputs).visualizations
+            report_artifacts = report_artifacts.mix(vcf2circos_results.flatMap { _meta, _caller_name, html_report, summary -> [html_report, summary] })
+        } else {
+            genome_reference_fai = channel.value(file(reference_fai_path, checkIfExists: false))
+            genome_empty_tracks = VCF2CIRCOS_EMPTY_TRACKS()
+            if (run_coverage_qc) {
+                genome_coverage_labels = mosdepth_results.coverage
+                    .map { meta, _summary, _global_dist, _region_dist, _regions, _regions_index, _threshold_bed, _coverage_regions -> "${meta.role}:${meta.sample_id}" }
+                    .collect()
+                genome_coverage_files = mosdepth_results.coverage
+                    .map { _meta, _summary, _global_dist, _region_dist, regions, _regions_index, _threshold_bed, _coverage_regions -> regions }
+                    .collect()
+            } else {
+                genome_coverage_labels = channel.value([])
+                genome_coverage_files = genome_empty_tracks.coverage.map { empty_track -> [empty_track] }
             }
-        vcf2circos_results = VCF2CIRCOS(vcf2circos_inputs).visualizations
-        report_artifacts = report_artifacts.mix(vcf2circos_results.flatMap { _meta, _caller_name, html_report, summary -> [html_report, summary] })
+            genome_sv_files = run_sv ? manta_calls.map { values -> values[2] }.collect() : genome_empty_tracks.sv.map { empty_track -> [empty_track] }
+            if (run_cnv && params.analysis_type.toString() == 'germline') {
+                genome_cnv_files = germline_cnv_final.map { _meta, _interval_vcf, segment_vcf, _ratios -> segment_vcf }.collect()
+                genome_cnv_format = 'germline_vcf'
+            } else if (run_cnv) {
+                genome_cnv_files = somatic_cnv_final.map { _meta, _cr, _model, _hets, called -> called }.collect()
+                genome_cnv_format = 'somatic_seg'
+            } else {
+                genome_cnv_files = genome_empty_tracks.cnv.map { empty_track -> [empty_track] }
+                genome_cnv_format = 'NA'
+            }
+            genome_inputs = processed_calls
+                .map { meta, caller_name, normalized_vcf, _normalized_vcf_index, _bcftools_stats, _variant_summary -> tuple(meta, caller_name, normalized_vcf) }
+                .combine(genome_reference_fai)
+                .combine(channel.value(params.analysis_type.toString()))
+                .combine(channel.value(vcf2circos_bin_size))
+                .combine(genome_coverage_labels)
+                .combine(genome_coverage_files)
+                .combine(genome_sv_files)
+                .combine(genome_cnv_files)
+                .combine(channel.value(genome_cnv_format))
+            vcf2circos_results = VCF2CIRCOS_GENOME(genome_inputs).visualizations
+            report_artifacts = report_artifacts.mix(vcf2circos_results.flatMap { _meta, _caller_name, html_report, summary, provenance -> [html_report, summary, provenance] })
+        }
     }
 
     if (run_multiqc) {
@@ -989,7 +1045,8 @@ workflow {
             run_cnv,
             run_coverage_qc,
             run_multiqc,
-            run_vcf2circos
+            run_vcf2circos,
+            vcf2circos_mode
         ) }
         ANALYSIS_REPORT(report_process_input)
     }
@@ -1067,7 +1124,8 @@ workflow {
             if (run_multiqc) report_command.addAll(['--multiqc-link', "../multiqc/${params.analysis_type}.multiqc.html"])
             if (run_vcf2circos) {
                 def display_caller = selected_caller == 'compare' ? (params.analysis_type.toString() == 'germline' ? 'haplotypecaller' : 'mutect2') : selected_caller
-                report_command.addAll(['--vcf2circos-link', "../vcf2circos/${report_identifier}.${display_caller}.vcf2circos.html"])
+                def visualization_suffix = vcf2circos_mode == 'genome' ? '.genome.vcf2circos.html' : '.vcf2circos.html'
+                report_command.addAll(['--vcf2circos-link', "../vcf2circos/${report_identifier}.${display_caller}${visualization_suffix}"])
             }
             def report_process = new ProcessBuilder(report_command).inheritIO().start()
             def report_exit_code = report_process.waitFor()
