@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [1.0.0] - 2026-10-15
+
+### Added
+
+- Genome-scale Circos visualization added after the v1.0.0-rc1 release, including the self-contained genome-mode demonstration.
+
+### Changed
+
+- Finalized public-release documentation, citation metadata, and active version metadata for v1.0.0.
+- Clarified compact technical-validation evidence and the boundaries around biological validation, production-scale performance, and production configuration support.
+
 ## [1.0.0-rc1] - 2026-08-23
 
 ### Added

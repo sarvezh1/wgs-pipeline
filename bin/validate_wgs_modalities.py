@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Block 7 modality configuration and emit public-safe provenance."""
+"""Validate WGS modality configuration and emit public-safe provenance."""
 
 from __future__ import annotations
 

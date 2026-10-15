@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: Static and software integrity checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Nextflow 26.04.6
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: "26.04.6"
+          install-java: false
+
+      - name: Run Python unit tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Lint Nextflow source
+        run: nextflow lint .
+
+      - name: Parse Nextflow configurations
+        run: |
+          nextflow config . -profile standard >/dev/null
+          nextflow config . -profile docker >/dev/null
+          nextflow config . -profile slurm >/dev/null
+          nextflow config . -profile slurm_singularity >/dev/null

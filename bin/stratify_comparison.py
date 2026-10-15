@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Intersect immutable Block 4 membership outputs with benchmark strata."""
+"""Intersect immutable caller-membership outputs with benchmark strata."""
 
 import argparse
 import csv

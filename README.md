@@ -1,9 +1,9 @@
 # WGS Variant Analysis Pipeline
 
 ![Nextflow](https://img.shields.io/badge/Nextflow-DSL2-23aa62?logo=nextflow&logoColor=white)
-![DSL2](https://img.shields.io/badge/workflow-DSL2-2f80ed)
 ![Docker](https://img.shields.io/badge/execution-Docker-2496ed?logo=docker&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/sarvezh1/wgs-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvezh1/wgs-pipeline/actions/workflows/ci.yml)
 
 A reproducible Nextflow DSL2 workflow for short-read human WGS analysis. In addition to its established germline and matched tumor-normal small-variant framework, it provides optional Manta structural variants, production-resource-backed GATK CNV workflows, and mosdepth genome/region coverage QC. These modalities fan out from the same caller-ready BAMs and do not alter small-variant calling, benchmarking, concordance, stratification, or performance semantics.
 
@@ -29,31 +29,17 @@ flowchart TB
 
   READY --> MODE{"Analysis mode"}
 
-  MODE -->|Germline| GSELECT["Germline callers"]
-  MODE -->|Somatic| SSELECT["Matched tumor-normal callers"]
-
   subgraph GERMLINE["Germline"]
       direction LR
       GSELECT --> HC["GATK HaplotypeCaller"]
       GSELECT --> DV["DeepVariant"]
   end
 
-  subgraph SOMATIC["Matched tumor-normal"]
+  subgraph SOMATIC["Matched tumor-normal somatic"]
       direction LR
-      SSELECT --> M2["Mutect2"]
+      SSELECT --> M2["Mutect2<br/>basic or production profile"]
       SSELECT --> ST["Strelka2"]
       SSELECT --> DS["DeepSomatic"]
-  end
-
-  subgraph SOMATIC["Matched tumor-normal somatic"]
-      direction TB
-      SSELECT{"caller"}
-      M2["Mutect2<br/>basic or production profile"]
-      ST["Strelka2"]
-      DS["DeepSomatic"]
-      SSELECT --> M2
-      SSELECT --> ST
-      SSELECT --> DS
   end
 
   MODE -->|germline| GSELECT
@@ -144,6 +130,16 @@ MultiQC and the integrated analysis report are reporting sinks. They aggregate o
 
 > **Scope note:** Small-variant calling, benchmarking, caller comparison, stratification, coverage QC, and reporting are validated using the bundled compact regression fixtures. Manta structural-variant calling is integrated and validated for workflow execution and valid empty-callset handling. GATK CNV workflows are implemented for production use but require compatible study-specific models, intervals, and/or panels of normals and are therefore not biologically validated using the compact fixtures. Full-genome accuracy, SV/CNV sensitivity, sex-chromosome behavior, and production-scale performance require external GRCh38 resources and full-WGS validation.
 
+## Validation snapshot
+
+**COMPACT TECHNICAL VALIDATION — not whole-genome accuracy estimates.** Bundled chr20 fixtures validate HG002 germline execution with HaplotypeCaller and DeepVariant, and HG008 matched tumor-normal execution with Mutect2, Strelka2, and DeepSomatic. Existing frozen evidence also covers compact allele benchmarking, hap.py/vcfeval plumbing, caller comparison and stratified outputs, coverage QC and reporting, plus Manta workflow execution and valid empty-callset behavior. See [Technical validation](#technical-validation) for the frozen results and their interpretation boundaries.
+
+GATK CNV production architecture and full-GRCh38 resource routing are implemented and structurally validated, but CNV biological accuracy is not validated. SLURM and Apptainer/Singularity support has configuration-resolution evidence only. Full-WGS biological accuracy and production-scale performance remain unmeasured; no SV sensitivity/specificity, X/Y/PAR caller behavior, or clinical validity is claimed.
+
+## Representative outputs
+
+The detailed [Example outputs](#example-outputs) section contains the integrated WGS HTML report, MultiQC report, genome-mode Circos demonstration, and regional VCF2Circos example. The genome-mode demonstration uses synthetic visualization-only records and is not a biological validation result.
+
 
 ## Features
 
@@ -194,7 +190,7 @@ The included local profile is intentionally conservative: one CPU per process, `
 Clone or otherwise obtain the repository, change into its root directory, and confirm that `nextflow` and `docker` are available. A compact germline technical test is:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/sarvezh1/wgs-pipeline.git
 cd wgs-pipeline
 nextflow run . -profile docker \
   --resource_mode fixture \
@@ -432,7 +428,7 @@ The commands below use the bundled compact fixtures. They explicitly pass `chr20
 
 `--gatk_germline_mode vcf` is the compatibility default. HaplotypeCaller writes the regular single-sample VCF and routes it directly to existing normalization/QC.
 
-`--gatk_germline_mode gvcf` runs HaplotypeCaller with `--emit-ref-confidence GVCF`, preserves `<sample>.haplotypecaller.g.vcf.gz` and its tabix index, then runs GenotypeGVCFs to create `<sample>.haplotypecaller.vcf.gz` and its index. The final genotyped VCF—not the intermediate GVCF—is routed to normalization, VEP, or VCF2Circos. These are standard GATK GVCFs suitable as inputs to a later cohort joint-genotyping workflow; this pipeline does not implement GenomicsDBImport or a cohort database in this block.
+`--gatk_germline_mode gvcf` runs HaplotypeCaller with `--emit-ref-confidence GVCF`, preserves `<sample>.haplotypecaller.g.vcf.gz` and its tabix index, then runs GenotypeGVCFs to create `<sample>.haplotypecaller.vcf.gz` and its index. The final genotyped VCF—not the intermediate GVCF—is routed to normalization, VEP, or VCF2Circos. These are standard GATK GVCFs suitable as inputs to a later cohort joint-genotyping workflow; the current workflow does not implement GenomicsDBImport or a cohort database.
 
 Both the direct and genotyped HaplotypeCaller VCFs are raw callsets. A publication analysis must choose and report an appropriate filtering design. VQSR normally requires a sufficiently large callset/cohort and appropriate training resources; a scientifically justified hard-filter design may be more suitable for small studies. The workflow deliberately supplies neither arbitrary hard-filter thresholds nor fixture-scale VQSR.
 
@@ -531,7 +527,7 @@ Published files include `concordance_summary.tsv`, `pairwise_jaccard.tsv`, `agre
 
 With stratification enabled, `comparison/stratified/` adds `stratified_concordance_summary.tsv`, `stratified_jaccard.tsv`, and `stratified_discordant_variants.tsv`; germline also adds `stratified_genotype_concordance.tsv`. These are derivatives of the unchanged caller-membership tables. Germline rows include shared, HaplotypeCaller-only, DeepVariant-only, genotype-concordant, genotype-discordant, and missing/no-call counts. Somatic rows include all-three, each pairwise-only group, each caller-specific group, and union. Pairwise Jaccard is emitted for ALL/SNV/INDEL and available indel-size bins; an empty pairwise union is `NA`. `truth_match_fraction` means the descriptive fraction of alleles in that agreement category and effective stratum that exactly match benchmark truth. It is not a biological posterior probability and does not replace official hap.py classification.
 
-Tumor VAF harmonization is intentionally deferred. The current outputs expose materially different native semantics: Mutect2 has tumor `FORMAT/AF` plus allelic depths; DeepSomatic has single-tumor `FORMAT/VAF` plus AD and separate normal-depth fields; Strelka2 uses tiered base counts (`AU/CU/GU/TU`) for SNVs and tiered `TAR/TIR` counts for indels. Converting those fields into one caller-comparable VAF would require an explicit, validated harmonization policy. No synthetic VAF is generated in this block.
+Tumor VAF harmonization is intentionally deferred. The current outputs expose materially different native semantics: Mutect2 has tumor `FORMAT/AF` plus allelic depths; DeepSomatic has single-tumor `FORMAT/VAF` plus AD and separate normal-depth fields; Strelka2 uses tiered base counts (`AU/CU/GU/TU`) for SNVs and tiered `TAR/TIR` counts for indels. Converting those fields into one caller-comparable VAF would require an explicit, validated harmonization policy. No synthetic VAF is generated in the current implementation.
 
 `stratified_comparison_provenance.tsv` records each BED/checksum, effective bases, benchmark identity, and the non-partitioning overlap semantics used for these derivatives.
 
@@ -1035,7 +1031,7 @@ The optional BQSR fixture uses a compact dbSNP 138 subset covering both validati
 - The bundled reference, known-sites, truth, and FASTQ fixtures cover compact chr20 validation regions, not a full genome.
 - Manta 1.6.0 is the pinned mature short-read SV implementation; the tiny chr20 fixtures may legitimately yield no final SVs and do not establish genome-wide sensitivity.
 - GATK CNV requires study-compatible intervals and external trained models/PoNs. The production architecture is structurally validated, but compact fixtures cannot provide biological CNV validation.
-- Sex-chromosome and PAR calling is configuration-only in this block because the fixtures contain chr20 only. Per-region small-variant ploidy routing and non-standard karyotypes remain future work.
+- Sex-chromosome and PAR calling is configuration-only in this release because the fixtures contain chr20 only. Per-region small-variant ploidy routing and non-standard karyotypes remain future work.
 - HaplotypeCaller outputs are raw callsets; this workflow does not yet impose a cohort VQSR or study-specific hard-filter policy.
 - The production Mutect2 profile requires external population, PoN, and contamination-sites resources, but validation cannot prove that they are comprehensive or appropriate for a particular cohort.
 - Cohort-scale GenomicsDBImport/joint genotyping is not implemented; emitted standard GVCFs are retained for that later workflow.
@@ -1056,6 +1052,6 @@ The optional BQSR fixture uses a compact dbSNP 138 subset covering both validati
 
 The pipeline source and repository-authored documentation are available under the [MIT License](LICENSE).
 
-Citation metadata for release candidate v1.0.0-rc1 are provided in [`CITATION.cff`](CITATION.cff). No DOI has been assigned.
+Citation metadata for version `1.0.0` are provided in [`CITATION.cff`](CITATION.cff). A release DOI has not yet been assigned.
 
 Third-party tools, container images, reference resources, and benchmark data remain subject to their own licenses and terms. Their licenses do not inherit from or replace the repository license. The production resource guide records Broad/GATK, NIST/GIAB/GA4GH, Ensembl VEP, Manta, mosdepth, VCF2Circos, and Plotly provenance and attribution requirements; fixture-specific provenance remains in the repository files linked above.

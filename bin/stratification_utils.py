@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free helpers shared by Block 5 stratification scripts."""
+"""Dependency-free helpers shared by the stratification scripts."""
 
 import gzip
 import hashlib

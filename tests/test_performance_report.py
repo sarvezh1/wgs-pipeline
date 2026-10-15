@@ -83,7 +83,7 @@ class PerformanceParserTests(unittest.TestCase):
         self.assertEqual(caller_rows[0]["executed_tasks"], "1")
         self.assertEqual(caller_rows[0]["summed_task_wall_seconds"], "10")
 
-    def test_block7_tasks_have_distinct_stages(self):
+    def test_wgs_modality_tasks_have_distinct_stages(self):
         manta = record(name="MANTA_GERMLINE (HG002:manta)", tag="HG002:manta")
         mosdepth = record(task_id="2", hash="cd/ef1234", name="MOSDEPTH (HG002:coverage)", tag="HG002:coverage")
         cnv = record(task_id="3", hash="ef/ab1234", name="GERMLINE_CNV_CALLER_CASE (HG002:gCNV CASE)", tag="HG002:gCNV CASE")

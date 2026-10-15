@@ -14,7 +14,7 @@ from stratification_utils import intersect_intervals, interval_bases, read_bed, 
 
 class StratificationTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="block5-tests-")
+        self.temp = tempfile.TemporaryDirectory(prefix="stratification-tests-")
         self.directory = self.temp.name
 
     def tearDown(self):

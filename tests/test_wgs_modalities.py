@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class Block7Tests(unittest.TestCase):
+class WgsModalityTests(unittest.TestCase):
     def run_script(self, script, *args):
         return subprocess.run(["python3", str(ROOT / "bin" / script), *map(str, args)], text=True, capture_output=True)
 

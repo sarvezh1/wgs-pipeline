@@ -21,7 +21,7 @@ def write_tsv(path, fields, rows):
 
 class AnalysisReportTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="block8-report-")
+        self.temp = tempfile.TemporaryDirectory(prefix="analysis-report-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.results = self.root / "results"
