@@ -38,7 +38,6 @@ jobs:
         uses: nf-core/setup-nextflow@v2
         with:
           version: "26.04.6"
-          install-java: false
 
       - name: Run Python unit tests
         run: python3 -m unittest discover -s tests -v
