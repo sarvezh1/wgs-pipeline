@@ -2,13 +2,18 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata in this file."
 title: "WGS Variant Analysis Pipeline"
 type: software
+
 authors:
   - family-names: "Galgale"
     given-names: "Sarvesh"
+
 version: 1.0.0
 date-released: 2026-10-15
+doi: 10.5281/zenodo.23404308
 repository-code: "https://github.com/sarvezh1/wgs-pipeline"
+
 license: MIT
+
 keywords:
   - bioinformatics
   - whole-genome sequencing
@@ -19,6 +24,7 @@ keywords:
   - variant benchmarking
   - structural variants
   - reproducibility
+
 abstract: >-
   A reproducible Nextflow DSL2 workflow for short-read human whole-genome
   variant analysis supporting germline and matched tumor-normal workflows,

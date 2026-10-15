@@ -1,9 +1,15 @@
 # WGS Variant Analysis Pipeline
 
-![Nextflow](https://img.shields.io/badge/Nextflow-DSL2-23aa62?logo=nextflow&logoColor=white)
-![Docker](https://img.shields.io/badge/execution-Docker-2496ed?logo=docker&logoColor=white)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+**Reproducible human short-read WGS analysis for germline and matched tumor-normal variant discovery, benchmarking, and reporting.**
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23404308.svg)](https://doi.org/10.5281/zenodo.23404308)
+[![GitHub Release](https://img.shields.io/github/v/release/sarvezh1/wgs-pipeline?sort=semver)](https://github.com/sarvezh1/wgs-pipeline/releases/latest)
 [![CI](https://github.com/sarvezh1/wgs-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvezh1/wgs-pipeline/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+[![Nextflow](https://img.shields.io/badge/Nextflow-26.04.6-0DC09D?logo=nextflow&logoColor=white)](https://www.nextflow.io/)
+[![Docker](https://img.shields.io/badge/Docker-local%20execution-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+![Genome](https://img.shields.io/badge/Genome-GRCh38-6C5CE7)
 
 A reproducible Nextflow DSL2 workflow for short-read human WGS analysis. In addition to its established germline and matched tumor-normal small-variant framework, it provides optional Manta structural variants, production-resource-backed GATK CNV workflows, and mosdepth genome/region coverage QC. These modalities fan out from the same caller-ready BAMs and do not alter small-variant calling, benchmarking, concordance, stratification, or performance semantics.
 
@@ -1048,10 +1054,13 @@ The optional BQSR fixture uses a compact dbSNP 138 subset covering both validati
 - Fixture performance summaries are instrumentation checks only; a controlled full-WGS experiment is still required for publication-scale runtime, CPU, RAM, I/O, and accuracy-versus-compute tables.
 - The workflow has not been validated for clinical diagnostic use.
 
-## License, citation, and attribution
+## Citation, license, and attribution
+
+Version `1.0.0` is archived on Zenodo with DOI
+[`10.5281/zenodo.23404308`](https://doi.org/10.5281/zenodo.23404308).
+
+Citation metadata are provided in [`CITATION.cff`](CITATION.cff). For reproducible reference to this specific release, cite the Zenodo DOI above. GitHub's **Cite this repository** interface can also generate citation formats from the CFF metadata.
 
 The pipeline source and repository-authored documentation are available under the [MIT License](LICENSE).
 
-Citation metadata for version `1.0.0` are provided in [`CITATION.cff`](CITATION.cff). A release DOI has not yet been assigned.
-
-Third-party tools, container images, reference resources, and benchmark data remain subject to their own licenses and terms. Their licenses do not inherit from or replace the repository license. The production resource guide records Broad/GATK, NIST/GIAB/GA4GH, Ensembl VEP, Manta, mosdepth, VCF2Circos, and Plotly provenance and attribution requirements; fixture-specific provenance remains in the repository files linked above.
+Third-party tools, container images, reference resources, and benchmark data remain subject to their original licenses and terms. Their licenses do not inherit from or replace the repository license. The production resource guide records relevant tool and resource provenance and attribution requirements; fixture-specific provenance is retained in the repository.
